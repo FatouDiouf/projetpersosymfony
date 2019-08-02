@@ -21,7 +21,7 @@ class Partenaire
     private $id;
 
     /**
-     * @ORM\Column(type="integer")
+     * @ORM\Column(type="string", length=255)
      */
     private $ninea;
 
@@ -61,12 +61,12 @@ class Partenaire
         return $this->id;
     }
 
-    public function getNinea(): ?int
+    public function getNinea(): ?string
     {
         return $this->ninea;
     }
 
-    public function setNinea(int $ninea): self
+    public function setNinea(string $ninea): self
     {
         $this->ninea = $ninea;
 
