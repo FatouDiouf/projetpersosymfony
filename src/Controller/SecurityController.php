@@ -15,6 +15,7 @@ use Symfony\Component\Validator\Validator\ValidatorInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\Security\Core\Encoder\UserPasswordEncoderInterface;
 use App\Entity\Compte;
+use App\Repository\PartenaireRepository;
 
 /**
  * @Route("/security", name="api")
@@ -105,5 +106,18 @@ class SecurityController extends AbstractController
         ];
         return new JsonResponse($data, 500);
     }
+
+   /**
+     * @Route("/liste", name="liste", methods={"GET"})
+     */
+    public function liste(PartenaireRepository $partRepository, SerializerInterface $serializer)
+    {
+        $parte = $partRepository->findAll();
+        $data = $serializer->serialize($parte, 'json');
+
+        return new Response($data, 200, [
+            'Content-Type' => 'application/json'
+        ]);
+    } 
     
 }
