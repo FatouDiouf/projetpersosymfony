@@ -63,6 +63,11 @@ class User implements UserInterface
      */
     private $partenaire;
 
+    /**
+     * @ORM\Column(type="integer", nullable=true)
+     */
+    private $compte;
+
     public function getId(): ?int
     {
         return $this->id;
@@ -204,6 +209,18 @@ class User implements UserInterface
     public function setPartenaire(?Partenaire $partenaire): self
     {
         $this->partenaire = $partenaire;
+
+        return $this;
+    }
+
+    public function getCompte(): ?int
+    {
+        return $this->compte;
+    }
+
+    public function setCompte(?int $compte): self
+    {
+        $this->compte = $compte;
 
         return $this;
     }

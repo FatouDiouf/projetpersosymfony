@@ -4,6 +4,7 @@ namespace App\Controller;
 
 use App\Entity\User;
 use App\Entity\Partenaire;
+use App\Entity\Depot;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -35,11 +36,10 @@ class SecurityController extends AbstractController
         foreach ($com as $key => $value) {
             $id = $value->getId();
         }
-        var_dump($id);
         if (isset($values->username, $values->password)) {
-            
-            
-            
+
+
+
             $user = new User();
             $user->setUsername($values->username);
             $user->setPassword($passwordEncoder->encodePassword($user, $values->password));
@@ -49,7 +49,7 @@ class SecurityController extends AbstractController
             $user->setAdresse($values->adresse);
             $user->setTelephone($values->telephone);
             $user->setStatut($values->statut);
-            
+
             $errors = $validator->validate($user);
             if (count($errors)) {
                 $errors = $serializer->serialize($errors, 'json');
@@ -60,15 +60,15 @@ class SecurityController extends AbstractController
             $entityManager->persist($user);
             $entityManager->flush();
 
-        
+
 
             $comptes = new Compte();
 
             $num = rand(1, 11000);
-            $compte = $id.$num;
+            $compte = $id . $num;
             $comptes->setNumerocompte($compte);
             $comptes->setSolde(0);
-    
+
             $errors = $validator->validate($comptes);
             if (count($errors)) {
                 $errors = $serializer->serialize($errors, 'json');
@@ -78,7 +78,7 @@ class SecurityController extends AbstractController
             }
             $entityManager->persist($comptes);
             $entityManager->flush();
-  
+
 
             $part = new Partenaire();
             $dat = rand(0, 100210);
@@ -98,7 +98,6 @@ class SecurityController extends AbstractController
             ];
 
             return new JsonResponse($data, 201);
-            
         }
         $data = [
             'status' => 500,
@@ -107,7 +106,7 @@ class SecurityController extends AbstractController
         return new JsonResponse($data, 500);
     }
 
-   /**
+    /**
      * @Route("/liste", name="liste", methods={"GET"})
      */
     public function liste(PartenaireRepository $partRepository, SerializerInterface $serializer)
@@ -118,6 +117,20 @@ class SecurityController extends AbstractController
         return new Response($data, 200, [
             'Content-Type' => 'application/json'
         ]);
-    } 
+    }
+
+    /**
+     * @Route("/login", name="login", methods={"POST"})
+     */
+    public function login(Request $request)
+    {
+        $user = $this->getUser();
+        return $this->json([
+            'username' => $user->getUsername(),
+            'roles' => $user->getRoles()
+        ]);
+    }
+
+
     
 }
