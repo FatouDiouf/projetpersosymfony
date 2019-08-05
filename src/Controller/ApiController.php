@@ -2,6 +2,8 @@
 
 namespace App\Controller;
 use App\Entity\User;
+use App\Entity\Compte;
+use App\Entity\Depot;
 use App\Entity\Partenaire;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\Request;
@@ -17,56 +19,7 @@ use Symfony\Component\Security\Core\Encoder\UserPasswordEncoderInterface;
      */
 class ApiController extends AbstractController
 {
-    /**
-     * @Route("/adminpart", name="adminpart")
-     */
-    public function ajoutuser(Request $request, UserPasswordEncoderInterface $passwordEncoder, EntityManagerInterface $entityManager, SerializerInterface $serializer, ValidatorInterface $validator)
-    {
-        $values = json_decode($request->getContent());
-        if (isset($values->username, $values->password)) {
-            $cont = new SecurityController();
-            $idpar = $cont->getUser()->getPartenaire();
-            $depot = $this->getDoctrine()->getRepository(Partenaire::class)->findOneBy(['ninea'=>1930]);
-            $car=$depot[1]->getId();
-            $use = new User();
-
-
-            $use->setUsername($values->username);
-            $use->setPassword($passwordEncoder->encodePassword($use, $values->password));
-            $use->setRoles($values->roles);
-            $use->setNom($values->nom);
-            $use->setEmail($values->email);
-            $use->setAdresse($values->adresse);
-            $use->setTelephone($values->telephone);
-            $use->setStatut($values->statut);
-            $use->setPartenaire($idpar);
-            $use->setCompte($car);
-
-            $errors = $validator->validate($use);
-            if (count($errors)) {
-                $errors = $serializer->serialize($errors, 'json');
-                return new Response($errors, 500, [
-                    'Content-Type' => 'application/json'
-                ]);
-            }
-            $entityManager->persist($use);
-            $entityManager->flush();
-
-            $data = [
-                'status' => 201,
-                'message' => 'L\'utilisateur a été créé'
-            ];
-
-            return new JsonResponse($data, 201);
-        }
-        $data = [
-            'status' => 500,
-            'message' => 'Vous devez renseigner les champs'
-        ];
-        return new JsonResponse($data, 500);
-    }
-
-
+   
     /**
      * @Route("/depot", name="add_depot", methods={"POST"})
      */

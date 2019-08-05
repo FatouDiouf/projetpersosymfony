@@ -3,20 +3,22 @@
 namespace App\Controller;
 
 use App\Entity\User;
+use App\Entity\Compte;
+use App\Form\UserType;
+use App\Form\CompteType;
 use App\Entity\Partenaire;
-use App\Entity\Depot;
+use App\Form\PartenaireFormType;
+use App\Repository\PartenaireRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
-use Symfony\Component\Validator\Constraints\Date;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Serializer\SerializerInterface;
+use Symfony\Component\Validator\Constraints\NotBlank;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\Security\Core\Encoder\UserPasswordEncoderInterface;
-use App\Entity\Compte;
-use App\Repository\PartenaireRepository;
 
 /**
  * @Route("/security", name="api")
@@ -30,81 +32,131 @@ class SecurityController extends AbstractController
      */
     public function register(Request $request, UserPasswordEncoderInterface $passwordEncoder, EntityManagerInterface $entityManager, SerializerInterface $serializer, ValidatorInterface $validator)
     {
-        $values = json_decode($request->getContent());
-        $rep = $this->getDoctrine()->getRepository(Partenaire::class);
-        $com = $rep->findAll();
-        foreach ($com as $key => $value) {
-            $id = $value->getId();
-        }
-        if (isset($values->username, $values->password)) {
+        $part = new Partenaire();
+        $form = $this->createForm(PartenaireFormType::class, $part);
+        $form->handleRequest($request);
+        $values = $request->request->all();
+        $form->submit($values);
+
+        if ($form->isSubmitted()) {
+
+            $entityManager = $this->getDoctrine()->getManager();
+            $entityManager->persist($part);
+            $entityManager->flush();
+
 
 
 
             $user = new User();
-            $user->setUsername($values->username);
-            $user->setPassword($passwordEncoder->encodePassword($user, $values->password));
-            $user->setRoles(["ROLE_ADMIN"]);
-            $user->setNom($values->nom);
-            $user->setEmail($values->email);
-            $user->setAdresse($values->adresse);
-            $user->setTelephone($values->telephone);
-            $user->setStatut($values->statut);
 
-            $errors = $validator->validate($user);
-            if (count($errors)) {
-                $errors = $serializer->serialize($errors, 'json');
-                return new Response($errors, 500, [
-                    'Content-Type' => 'application/json'
-                ]);
-            }
+            $form = $this->createForm(UserType::class, $user);
+            $form->handleRequest($request);
+            $values = $request->request->all();
+            $form->submit($values);
+            $files = $request->files->all()['imageName'];
+
+
+
+            $user->setPassword(
+                $passwordEncoder->encodePassword(
+                    $user,
+                    $form->get('plainPassword')->getData()
+                )
+            );
+            $user->setRoles(["ROLE_ADMIN"]);
+            $user->setImageFile($files);
+            $user->setStatut("debloquer");
+            $user->setPartenaire($part);
+
+            $entityManager = $this->getDoctrine()->getManager();
             $entityManager->persist($user);
             $entityManager->flush();
 
 
 
-            $comptes = new Compte();
-
-            $num = rand(1, 11000);
-            $compte = $id . $num;
-            $comptes->setNumerocompte($compte);
-            $comptes->setSolde(0);
-
-            $errors = $validator->validate($comptes);
-            if (count($errors)) {
-                $errors = $serializer->serialize($errors, 'json');
-                return new Response($errors, 500, [
-                    'Content-Type' => 'application/json'
-                ]);
-            }
-            $entityManager->persist($comptes);
-            $entityManager->flush();
 
 
-            $part = new Partenaire();
-            $dat = rand(0, 100210);
-            $nine = $id . $dat;
-            $part->setNinea($nine);
-            $part->setRaionsociale($values->raionsociale);
-            $part->setAdresse($values->adresse);
-            $part->setStatut($values->statut);
-            $part->addUser($user);
-            $part->addCompte($comptes);
-            $entityManager->persist($part);
+            $compte = new Compte();
+            $form = $this->createForm(CompteType::class, $compte);
+            $form->handleRequest($request);
+            $values = $request->request->all();
+            $form->submit($values);
+
+
+
+
+            $date = new \DateTime();
+            $num = "F";
+            $numero = $num . rand(10000, 99999);
+            $compte->setPartenaires($part);
+            $compte->setNumerocompte($numero);
+            $compte->setSolde(0);
+
+            $entityManager = $this->getDoctrine()->getManager();
+            $entityManager->persist($compte);
             $entityManager->flush();
 
             $data = [
                 'status' => 201,
-                'message' => 'L\'utilisateur a été créé'
+                'message' => 'Le partenaire son admin et son compte ont été créé'
             ];
 
             return new JsonResponse($data, 201);
         }
+
         $data = [
             'status' => 500,
             'message' => 'Vous devez renseigner les champs'
         ];
         return new JsonResponse($data, 500);
     }
+
+
+    /**
+     * @Route("/adminpart", name="app_register")
+     */
+    public function ajoutadmin(Request $request, UserPasswordEncoderInterface $passwordEncoder): Response
+    {
+        $user = new User();
+
+        $form = $this->createForm(UserType::class, $user);
+        $form->handleRequest($request);
+        $values = $request->request->all();
+        $form->submit($values);
+        $files = $request->files->all()['imageName'];
+
+
+
+        $user->setPassword(
+            $passwordEncoder->encodePassword(
+                $user,
+                $form->get('plainPassword')->getData()
+            )
+        );
+        $user->setRoles(["ROLE_USER"]);
+        $user->setImageFile($files);
+        $user->setStatut("debloquer");
+
+
+        $entityManager = $this->getDoctrine()->getManager();
+        $entityManager->persist($user);
+        $entityManager->flush();
+
+        $data = [
+            'status' => 201,
+            'message' => 'L\'utilisateur a été créé'
+        ];
+
+        return new JsonResponse($data, 201);
+
+
+        $data = [
+            'status' => 500,
+            'message' => 'Vous devez renseigner les champs'
+        ];
+        return new JsonResponse($data, 500);
+    }
+
 
     /**
      * @Route("/liste", name="liste", methods={"GET"})
@@ -130,7 +182,4 @@ class SecurityController extends AbstractController
             'roles' => $user->getRoles()
         ]);
     }
-
-
-    
 }

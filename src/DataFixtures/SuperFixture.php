@@ -32,6 +32,8 @@ class SuperFixture extends Fixture
         $user->setTelephone("778418109");
         $user->setStatut("bloqué");
         $user->setPartenaire(NULL);
+        $user->setImageName("admin.jpg");
+        
         $manager->persist($user);
 
 
@@ -45,6 +47,8 @@ class SuperFixture extends Fixture
         $user->setTelephone("7784596231");
         $user->setStatut("bloqué");
         $user->setPartenaire(NULL);
+        $user->setImageName("caissier.jpg");
+        
 
         $manager->persist($user);
         $manager->flush();
