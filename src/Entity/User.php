@@ -42,12 +42,13 @@ class User implements UserInterface
     /**
      * @ORM\Column(type="string", length=255)
      * @Assert\NotBlank()
-     * @Assert\Length(min="2", max="25")
+     * @Assert\Length(min="4",minMessage="ce champ doit comporter au moins {{limit}}caractere",
+     *  max="35",maxMessage="ce champ doit comporter au plus {{limit}}caractere")
      */
     private $nom;
 
     /**
-     * @ORM\Column(type="string", length=255)
+     * @ORM\Column(type="string", length=255, unique=true)
      * @Assert\NotBlank()
      * @Assert\Length(min="2", max="25")
      */
@@ -61,9 +62,10 @@ class User implements UserInterface
     private $adresse;
 
     /**
-     * @ORM\Column(type="string", length=255)
+     * @ORM\Column(type="string", length=255, unique=true)
      * @Assert\NotBlank()
-     * @Assert\Length( max="15")
+     * @Assert\Length( max="15",maxMessage="ce champ doit comporter au plus {{limit}}caractere")
+     * 
      */
     private $telephone;
 
@@ -80,7 +82,7 @@ class User implements UserInterface
     private $partenaire;
 
     /**
-     * @ORM\Column(type="integer", nullable=true)
+     * @ORM\Column(type="string", length=255, nullable=true)
      */
     private $compte;
 
@@ -293,12 +295,12 @@ class User implements UserInterface
         return $this;
     }
 
-    public function getCompte(): ?int
+    public function getCompte(): ?string
     {
         return $this->compte;
     }
 
-    public function setCompte(?int $compte): self
+    public function setCompte(?string $compte): self
     {
         $this->compte = $compte;
 

@@ -48,11 +48,13 @@ class SecurityController extends AbstractController
 
 
             $user = new User();
-
+           
             $form = $this->createForm(UserType::class, $user);
             $form->handleRequest($request);
+            
             $values = $request->request->all();
             $form->submit($values);
+            
             $files = $request->files->all()['imageName'];
 
 
@@ -67,6 +69,13 @@ class SecurityController extends AbstractController
             $user->setImageFile($files);
             $user->setStatut("debloquer");
             $user->setPartenaire($part);
+            $errors = $validator->validate($user);
+                     if (count($errors)) {
+                         $errors = $serializer->serialize($errors, 'json');
+                         return new Response($errors, 500, [
+                             'Content-Type' => 'application/json'
+                         ]);
+                     }
 
             $entityManager = $this->getDoctrine()->getManager();
             $entityManager->persist($user);
@@ -92,6 +101,14 @@ class SecurityController extends AbstractController
             $compte->setNumerocompte($numero);
             $compte->setSolde(0);
 
+            $errors = $validator->validate($compte);
+            if (count($errors)) {
+                $errors = $serializer->serialize($errors, 'json');
+                return new Response($errors, 500, [
+                    'Content-Type' => 'application/json'
+                ]);
+            }
+
             $entityManager = $this->getDoctrine()->getManager();
             $entityManager->persist($compte);
             $entityManager->flush();
@@ -112,51 +129,7 @@ class SecurityController extends AbstractController
     }
 
 
-    /**
-     * @Route("/adminpart", name="app_register")
-     */
-    public function ajoutadmin(Request $request, UserPasswordEncoderInterface $passwordEncoder): Response
-    {
-        $user = new User();
-
-        $form = $this->createForm(UserType::class, $user);
-        $form->handleRequest($request);
-        $values = $request->request->all();
-        $form->submit($values);
-        $files = $request->files->all()['imageName'];
-
-
-
-        $user->setPassword(
-            $passwordEncoder->encodePassword(
-                $user,
-                $form->get('plainPassword')->getData()
-            )
-        );
-        $user->setRoles(["ROLE_USER"]);
-        $user->setImageFile($files);
-        $user->setStatut("debloquer");
-
-
-        $entityManager = $this->getDoctrine()->getManager();
-        $entityManager->persist($user);
-        $entityManager->flush();
-
-        $data = [
-            'status' => 201,
-            'message' => 'L\'utilisateur a été créé'
-        ];
-
-        return new JsonResponse($data, 201);
-
-
-        $data = [
-            'status' => 500,
-            'message' => 'Vous devez renseigner les champs'
-        ];
-        return new JsonResponse($data, 500);
-    }
-
+    
 
     /**
      * @Route("/liste", name="liste", methods={"GET"})
