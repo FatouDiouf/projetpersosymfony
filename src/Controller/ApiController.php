@@ -46,6 +46,15 @@ class ApiController extends AbstractController
         $form->submit($values);
         $files = $request->files->all()['imageName'];
 
+       if($files->guessExtension()!="jpeg" && $files->guessExtension()!="png" )
+       {
+        $data = [
+            'status' => 500,
+            'message' => 'Vous devez devez choisir une image'
+        ];
+        return new JsonResponse($data, 500);
+       }
+
 
 
         $user->setPassword(
