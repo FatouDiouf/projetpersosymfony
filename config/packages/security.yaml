@@ -43,9 +43,11 @@ security:
     access_control:
         #   - { path: ^/admin, roles: ROLE_ADMIN }
         #   - { path: ^/profile, roles: ROLE_USER }
-        #    - { path: ^/api/register, roles: ROLE_SUPERADMIN }
-        #    - { path: ^/api/depot, roles: ROLE_CAISSIER }
-        #    - { path: ^/api/liste, roles: ROLE_SUPERADMIN }
-        #    - { path: ^/api/adminpart, roles: ROLE_ADMIN }
+           - { path: ^/api/register, roles: ROLE_SUPERADMIN }
+           - { path: ^/api/liste, roles: ROLE_SUPERADMIN }  
+           - { path: ^/api/compte, roles: ROLE_SUPERADMIN }  
+           - { path: ^/api/adminpart, roles: ROLE_ADMIN }
+           - { path: ^/api/update, roles: ROLE_ADMIN }
+           - { path: ^/api/depot, roles: ROLE_CAISSIER }
            - { path: ^/api/login, roles: IS_AUTHENTICATED_ANONYMOUS }
            - { path: ^/api/, roles: IS_AUTHENTICATED_FULLY }

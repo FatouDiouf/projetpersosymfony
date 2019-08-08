@@ -24,70 +24,27 @@ use Symfony\Component\Security\Core\Encoder\UserPasswordEncoderInterface;
 class ApiController extends AbstractController
 {
 
-
     /**
      * @Route("/adminpart", name="app_register")
      */
-    public function ajoutadmin(Request $request, UserPasswordEncoderInterface $passwordEncoder): Response
+    public function ajoutadmin(Request $request, UserPasswordEncoderInterface $passwordEncoder)
     {
         $cont = new SecurityController();
-        $idpar = $this->getUser()->getPartenaire();
-        
-       
-       $depot = $this->getDoctrine()->getRepository(Partenaire::class)->findOneBy(['id' => $idpar]);
+        $recupid = $this->getUser()->getPartenaire();
+
+
+        $depot = $this->getDoctrine()->getRepository(Partenaire::class)->findOneBy(['id' => $recupid]);
         $car = $depot->getComptes();
-        $numero = $car[0]->getNumerocompte();
+        $numerocompte = $car[0]->getNumerocompte();
 
-
-        $user = new User();
-        $form = $this->createForm(UserType::class, $user);
-        $form->handleRequest($request);
-        $values = $request->request->all();
-        $form->submit($values);
-        $files = $request->files->all()['imageName'];
-
-       if($files->guessExtension()!="jpeg" && $files->guessExtension()!="png" )
-       {
-        $data = [
-            'status' => 500,
-            'message' => 'Vous devez devez choisir une image'
-        ];
-        return new JsonResponse($data, 500);
-       }
-
-
-
-        $user->setPassword(
-            $passwordEncoder->encodePassword(
-                $user,
-                $form->get('plainPassword')->getData()
-            )
-        );
-        $user->setRoles(["ROLE_USER"]);
-        $user->setImageFile($files);
-        $user->setStatut("bloqué");
-        $user->setPartenaire($idpar);
-        $user->setCompte($numero);
-        
-
-        $entityManager = $this->getDoctrine()->getManager();
-        $entityManager->persist($user);
-
-        $entityManager->flush();
+        $this->aaddUser($recupid, $numerocompte, $request, $passwordEncoder);
 
         $data = [
             'status' => 201,
-            'message' => 'L\'utilisateur a été créé'
+            'message' => 'Le a été ajouté avec success'
         ];
 
         return new JsonResponse($data, 201);
-
-
-        $data = [
-            'status' => 500,
-            'message' => 'Vous devez renseigner les champs'
-        ];
-        return new JsonResponse($data, 500);
     }
 
     /**
@@ -111,8 +68,6 @@ class ApiController extends AbstractController
             $dep->setDatedepot(new \DateTime());
             $dep->setCompte($depot);
 
-
-
             $errors = $validator->validate($dep);
             if (count($errors)) {
                 $errors = $serializer->serialize($errors, 'json');
@@ -130,5 +85,95 @@ class ApiController extends AbstractController
         ];
 
         return new JsonResponse($data, 201);
+    }
+
+    public function aaddUser(Request $request, UserPasswordEncoderInterface $passwordEncoder, $recupid, $numerocompte = NULL): Response
+    {
+
+
+        $user = new User();
+        $form = $this->createForm(UserType::class, $user);
+        $form->handleRequest($request);
+        $values = $request->request->all();
+        $form->submit($values);
+        $files = $request->files->all()['imageName'];
+
+        if ($files->guessExtension() != "jpeg" && $files->guessExtension() != "png") {
+            $data = [
+                'status' => 500,
+                'message' => 'Vous devez devez choisir une image'
+            ];
+            return new JsonResponse($data, 500);
+        }
+
+        $user->setPassword(
+            $passwordEncoder->encodePassword(
+                $user,
+                $form->get('plainPassword')->getData()
+            )
+        );
+        $user->setRoles(["ROLE_ADMIN"]);
+        $user->setImageFile($files);
+        $user->setStatut("bloqué");
+        $user->setPartenaire($recupid);
+        $user->setCompte($numerocompte);
+
+
+        $entityManager = $this->getDoctrine()->getManager();
+        $entityManager->persist($user);
+
+        $entityManager->flush();
+
+        $data = [
+            'status' => 201,
+            'message' => 'L\'utilisateur a été créé'
+        ];
+
+        return new JsonResponse($data, 201);
+    }
+
+    /**
+     * @Route("/compte/{id}", name="update_compte", methods={"PUT"})
+     */
+    public function update(Request $request, SerializerInterface $serializer, Compte $compte, ValidatorInterface $validator, EntityManagerInterface $entityManager)
+    {
+        $com = new Compte();
+
+        $values = json_decode($request->getContent());
+
+        $recpid = $this->getUser()->getPartenaire();
+        $comp = $this->getDoctrine()->getRepository(Partenaire::class)->findOneBy(['id' => $recpid]);
+        $car = $comp->getComptes();
+
+        foreach ($car as $key => $value) {
+            $id = $value->getId();
+            if ($value->getNumerocompte() != $values->numerocompte && $value->getSolde(9) > 75000) {
+
+                $com->setNumerocompte($values->numerocompte);
+            }
+        }
+
+        $compteUpdate = $entityManager->getRepository(Compte::class)->find($compte->getId());
+        $data = json_decode($request->getContent());
+        foreach ($data as $key => $value) {
+            if ($key && !empty($value)) {
+                $name = ucfirst($key);
+                $setter = 'set' . $name;
+                $compteUpdate->$setter($value);
+            }
+        }
+        $errors = $validator->validate($compteUpdate);
+        if (count($errors)) {
+            $errors = $serializer->serialize($errors, 'json');
+            return new Response($errors, 500, [
+                'Content-Type' => 'application/json'
+            ]);
+        }
+        $entityManager->flush();
+        $data = [
+            'status' => 200,
+            'message' => 'Le téléphone a bien été mis à jour'
+        ];
+        return new JsonResponse($data);
     }
 }

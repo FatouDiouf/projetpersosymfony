@@ -2,6 +2,7 @@
 
 namespace App\Controller;
 
+use App\Controller\ApiController;
 use App\Entity\User;
 use App\Entity\Compte;
 use App\Form\UserType;
@@ -18,6 +19,7 @@ use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\Security\Core\Encoder\UserPasswordEncoderInterface;
+use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 
 /**
  * @Route("/api", name="api")
@@ -31,30 +33,62 @@ class SecurityController extends AbstractController
      */
     public function register(Request $request, UserPasswordEncoderInterface $passwordEncoder, EntityManagerInterface $entityManager, SerializerInterface $serializer, ValidatorInterface $validator)
     {
-        $part = new Partenaire();
-        $form = $this->createForm(PartenaireFormType::class, $part);
+        $recupid = new Partenaire();
+        $form = $this->createForm(PartenaireFormType::class, $recupid);
         $form->handleRequest($request);
         $values = $request->request->all();
         $form->submit($values);
 
+
         if ($form->isSubmitted()) {
 
+            $recupid->setStatut("bloque");
             $entityManager = $this->getDoctrine()->getManager();
-            $entityManager->persist($part);
+            $entityManager->persist($recupid);
             $entityManager->flush();
 
-
-
-
-            $user = new User();
-
-            $form = $this->createForm(UserType::class, $user);
+            $compte = new Compte();
+            $form = $this->createForm(CompteType::class, $compte);
             $form->handleRequest($request);
-
             $values = $request->request->all();
             $form->submit($values);
 
+
+
+
+            $rep = $this->getDoctrine()->getRepository(Partenaire::class);
+            $com = $rep->findAll();
+            foreach ($com as $key => $value) {
+                $id = $value->getId();
+            }
+
+            $num = $id + 1;
+            $numero = $num . rand(10000, 99999);
+            $compte->setPartenaires($recupid);
+            $compte->setNumerocompte($numero);
+            $compte->setSolde(0);
+
+            $errors = $validator->validate($compte);
+            if (count($errors)) {
+                $errors = $serializer->serialize($errors, 'json');
+                return new Response($errors, 500, [
+                    'Content-Type' => 'application/json'
+                ]);
+            }
+
+            $entityManager = $this->getDoctrine()->getManager();
+            $entityManager->persist($compte);
+            $entityManager->flush();
+
+            $user = new User();
+            $recupid = $this->getUser()->getPartenaire();
+
+            $form = $this->createForm(UserType::class, $user);
+            $form->handleRequest($request);
+            $values = $request->request->all();
+            $form->submit($values);
             $files = $request->files->all()['imageName'];
+
             if ($files->guessExtension() != "jpeg" && $files->guessExtension() != "png") {
                 $data = [
                     'status' => 500,
@@ -73,51 +107,25 @@ class SecurityController extends AbstractController
             );
             $user->setRoles(["ROLE_ADMIN"]);
             $user->setImageFile($files);
-            $user->setStatut("debloquer");
-            $user->setPartenaire($part);
-            $errors = $validator->validate($user);
-            if (count($errors)) {
-                $errors = $serializer->serialize($errors, 'json');
-                return new Response($errors, 500, [
-                    'Content-Type' => 'application/json'
-                ]);
-            }
+            $user->setStatut("bloqué");
+            $user->setPartenaire($recupid);
+            $user->setCompte($numero);
+
 
             $entityManager = $this->getDoctrine()->getManager();
             $entityManager->persist($user);
             $entityManager->flush();
 
+            $data = [
+                'status' => 201,
+                'message' => 'L\'utilisateur a été créé'
+            ];
+
+            return new JsonResponse($data, 201);
 
 
 
 
-            $compte = new Compte();
-            $form = $this->createForm(CompteType::class, $compte);
-            $form->handleRequest($request);
-            $values = $request->request->all();
-            $form->submit($values);
-
-
-
-
-            
-            $num = "F";
-            $numero = $num . rand(10000, 99999);
-            $compte->setPartenaires($part);
-            $compte->setNumerocompte($numero);
-            $compte->setSolde(0);
-
-            $errors = $validator->validate($compte);
-            if (count($errors)) {
-                $errors = $serializer->serialize($errors, 'json');
-                return new Response($errors, 500, [
-                    'Content-Type' => 'application/json'
-                ]);
-            }
-
-            $entityManager = $this->getDoctrine()->getManager();
-            $entityManager->persist($compte);
-            $entityManager->flush();
 
             $data = [
                 'status' => 201,
@@ -169,40 +177,36 @@ class SecurityController extends AbstractController
     {
         $values = json_decode($request->getContent());
 
-       // if (!empty($value)) {
-            $comt = $this->getDoctrine()->getRepository(Partenaire::class)->findOneBy(['ninea' => $values->ninea]);
+        $comt = $this->getDoctrine()->getRepository(Partenaire::class)->findOneBy(['ninea' => $values->ninea]);
 
 
-            $compt = new Compte();
-            $num = "F";
-            $numer = $num . rand(10000, 99999);
-            $compt->setNumerocompte($numer);
-            $compt->setPartenaires($comt);
-            $compt->setSolde(0);
+        $compt = new Compte();
+        $num = "F";
+        $numer = $num . rand(10000, 99999);
+        $compt->setNumerocompte($numer);
+        $compt->setPartenaires($comt);
+        $compt->setSolde(0);
 
 
 
-            $errors = $validator->validate($compt);
-            if (count($errors)) {
-                $errors = $serializer->serialize($errors, 'json');
-                return new Response($errors, 500, [
-                    'Content-Type' => 'application/json'
-                ]);
-            }
+        $errors = $validator->validate($compt);
+        if (count($errors)) {
+            $errors = $serializer->serialize($errors, 'json');
+            return new Response($errors, 500, [
+                'Content-Type' => 'application/json'
+            ]);
+        }
 
-            $entityManager->persist($compt);
-            $entityManager->flush();
+        $entityManager->persist($compt);
+        $entityManager->flush();
 
-            $data = [
-                'status' => 201,
-                'message' => 'Le compte a été ajouté avec success'
-            ];
-    
-            return new JsonResponse($data, 201);
-        //}
-        
+        $data = [
+            'status' => 201,
+            'message' => 'Le compte a été ajouté avec success'
+        ];
+
+        return new JsonResponse($data, 201);
     }
 
-
-    
+  
 }
