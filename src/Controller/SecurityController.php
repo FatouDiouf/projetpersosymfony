@@ -2,7 +2,6 @@
 
 namespace App\Controller;
 
-use App\Controller\ApiController;
 use App\Entity\User;
 use App\Entity\Compte;
 use App\Form\UserType;
@@ -19,6 +18,9 @@ use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\Security\Core\Encoder\UserPasswordEncoderInterface;
+use Nelmio\ApiDocBundle\Annotation\Model;
+use Nelmio\ApiDocBundle\Annotation\Security;
+use Swagger\Annotations as SWG;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 
 /**
@@ -43,9 +45,7 @@ class SecurityController extends AbstractController
         if ($form->isSubmitted()) {
 
             $recupid->setStatut("bloque");
-            $entityManager = $this->getDoctrine()->getManager();
-            $entityManager->persist($recupid);
-            $entityManager->flush();
+           
 
             $compte = new Compte();
             $form = $this->createForm(CompteType::class, $compte);
@@ -76,18 +76,15 @@ class SecurityController extends AbstractController
                 ]);
             }
 
-            $entityManager = $this->getDoctrine()->getManager();
-            $entityManager->persist($compte);
-            $entityManager->flush();
+            
 
             $user = new User();
-            $recupid = $this->getUser()->getPartenaire();
 
             $form = $this->createForm(UserType::class, $user);
             $form->handleRequest($request);
             $values = $request->request->all();
             $form->submit($values);
-            $files = $request->files->all()['imageName'];
+            $files = $request->files->all()['imageFile'];
 
             if ($files->guessExtension() != "jpeg" && $files->guessExtension() != "png") {
                 $data = [
@@ -105,12 +102,18 @@ class SecurityController extends AbstractController
                     $form->get('plainPassword')->getData()
                 )
             );
-            $user->setRoles(["ROLE_ADMIN"]);
+            $user->setRoles(["ROLE_ADMINPART"]);
             $user->setImageFile($files);
             $user->setStatut("bloqué");
             $user->setPartenaire($recupid);
-            $user->setCompte($numero);
+            $user->setCompte(NULL);
 
+            $entityManager = $this->getDoctrine()->getManager();
+            $entityManager->persist($recupid);
+
+            $entityManager = $this->getDoctrine()->getManager();
+            $entityManager->persist($compte);
+            
 
             $entityManager = $this->getDoctrine()->getManager();
             $entityManager->persist($user);
@@ -208,5 +211,53 @@ class SecurityController extends AbstractController
         return new JsonResponse($data, 201);
     }
 
-  
+/**
+     * @Route("/caissier", name="caissier", methods={"POST"})
+     */
+    
+    public function addcaissier(Request $request, UserPasswordEncoderInterface $passwordEncoder): Response
+    {
+
+
+        $user = new User();
+        $form = $this->createForm(UserType::class, $user);
+        $form->handleRequest($request);
+        $values = $request->request->all();
+        $form->submit($values);
+        $files = $request->files->all()['imageName'];
+
+        if ($files->guessExtension() != "jpeg" && $files->guessExtension() != "png") {
+            $data = [
+                'status' => 500,
+                'message' => 'Vous devez devez choisir une image'
+            ];
+            return new JsonResponse($data, 500);
+        }
+
+        $user->setPassword(
+            $passwordEncoder->encodePassword(
+                $user,
+                $form->get('plainPassword')->getData()
+            )
+        );
+        $user->setRoles(["ROLE_CAISSIER"]);
+        $user->setImageFile($files);
+        $user->setStatut("bloqué");
+        $user->setPartenaire(NULL);
+        $user->setCompte(NULL);
+
+
+        $entityManager = $this->getDoctrine()->getManager();
+        $entityManager->persist($user);
+
+        $entityManager->flush();
+
+        $data = [
+            'status' => 201,
+            'message' => 'L\'utilisateur a été créé'
+        ];
+
+        return new JsonResponse($data, 201);
+    }
+
 }
